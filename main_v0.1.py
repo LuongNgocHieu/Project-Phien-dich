@@ -1,0 +1,129 @@
+import speech_recognition as sr
+from googletrans import Translator
+
+import sys
+
+# Import PyQt5 modules
+from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton,
+        QGridLayout, QLabel, QLineEdit,
+        QComboBox, QCheckBox, QFileDialog,
+        QTextEdit)
+
+from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
+
+RECORD_TIMEOUT = 10
+RECORD_PHRASE_TIME_LIMIT = 25
+UI_FILE = 'main_v0.1.ui'
+
+class Ui(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(Ui, self).__init__()
+        uic.loadUi(UI_FILE, self)
+
+        # Window config
+        self.setWindowTitle("My Translator")
+        self.setFixedSize(444, 528)
+
+        # Connect buttons
+        self.btn_translate = self.findChild(QtWidgets.QPushButton, 'btn_translate')
+        self.btn_translate.clicked.connect(self.translate) # Remember to pass the definition/method, not the return value!
+
+        self.btn_record = self.findChild(QtWidgets.QPushButton, 'btn_record')
+        self.btn_record.clicked.connect(self.record) # Remember to pass the definition/method, not the return value!
+
+        self.textbox_input = self.findChild(QtWidgets.QTextEdit, 'textbox_input')
+        self.textbox_output = self.findChild(QtWidgets.QTextEdit, 'textbox_output')
+        self.textbox_output.readOnly = True
+
+        # Change translation language
+        self.action_english = self.findChild(QtWidgets.QAction, 'action_english')
+        self.action_vietnamese = self.findChild(QtWidgets.QAction, 'action_vietnamese')
+        self.action_german = self.findChild(QtWidgets.QAction, 'action_german')
+        self.action_japanese = self.findChild(QtWidgets.QAction, 'action_japanese')
+
+        self.action_english.triggered.connect(self.action_english_clicked)
+        self.action_german.triggered.connect(self.action_german_clicked)
+        self.action_vietnamese.triggered.connect(self.action_vietnamese_clicked)
+        self.action_japanese.triggered.connect(self.action_japanese_clicked)
+
+        self.lang = 'vietnamese'
+
+        # Speech recognition
+        self.recorder = sr.Recognizer()
+        # Speach recognition config threshold
+        self.recorder.dynamic_energy_threshold = False
+        self.recorder.energy_threshold = 600
+
+        self.show()
+
+    def record(self):
+        print("Speak Now")
+
+        try:
+            # use the microphone as source for input.
+            with sr.Microphone() as source:
+
+                # wait for a second to let the recognizer
+                # adjust the energy threshold based on
+                # the surrounding noise level
+                self.recorder.adjust_for_ambient_noise(source, duration=0.2)
+
+                #listens for the user's input
+                audio2 = self.recorder.listen(source,
+                    timeout=RECORD_TIMEOUT,
+                    phrase_time_limit=RECORD_PHRASE_TIME_LIMIT)
+
+                # Using google to recognize audio
+                record_text = self.recorder.recognize_google(audio2)
+                record_text = record_text.lower()
+                self.textbox_input.setText(record_text)
+
+                print("Did you say ", record_text)
+                # engine = pyttsx3.init()
+                # engine.say(record_text)
+                # engine.runAndWait()
+
+        except sr.WaitTimeoutError:
+            print("Timeout; No speech was detected")
+
+        except sr.RequestError as e:
+            print("Could not request results; {0}".format(e))
+
+        except sr.UnknownValueError:
+            print("unknown error occurred")
+
+    def translate(self):
+        translator = Translator()
+        input_text = self.textbox_input.toPlainText()
+        try:
+            self.translate_text = translator.translate(input_text, dest=self.lang).text
+            self.textbox_output.setText(self.translate_text)
+            print(self.translate_text)
+        except Exception as e:
+            print(e)
+
+    def action_english_clicked(self):
+        self.lang = 'english'
+
+    def action_german_clicked(self):
+        self.lang = 'german'
+
+    def action_vietnamese_clicked(self):
+        self.lang = 'vietnamese'
+
+    def action_japanese_clicked(self):
+        self.lang = 'japanese'
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    window = Ui()
+    app.exec_()
+
+if __name__ == "__main__":
+    try:
+        main()
+
+    except KeyboardInterrupt:
+        sys.exit()
